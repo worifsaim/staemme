@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="de">
+	<head>
+		<title>Stammesrechner</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+ 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+ 		<style>
+ 			body{
+ 				font-size: 24px;
+ 			}
+
+ 			.input-group > input{
+ 				font-size: 36px;
+ 				text-align: center;
+ 			}
+
+ 			.announce{
+
+ 			}
+
+ 			.resu{
+
+ 			}
+
+ 			.myLink{
+ 				color: var(--danger);
+ 			}
+ 		</style>
+		<script type="text/javascript">
+
+			var _ = function(x) {
+				return document.getElementById(x);
+			};
+
+			function floor(x){
+				return Math.floor(x);
+			}
+
+			function ceil(x){
+				return Math.ceil(x);
+			}
+
+			function todaysDate(){
+				var tD = new Date();
+				var ta = String(tD.getDate()).padStart(2, '0');
+				var mo = String(tD.getMonth() + 1).padStart(2, '0');
+				var ye = tD.getFullYear();
+
+				_("gregDay").value = ta;
+				_("gregMonth").value = mo;
+				_("gregYear").value = ye;
+			}
+
+			var leapstring = new Array("Gemeinjahr", "Schaltjahr", "mangelhaftes Gemeinjahr", "regelmässiges Gemeinjahr", "überzähliges Gemeinjahr", "mangelhaftes Schaltjahr", "regelmässiges Schaltjahr", "überzähliges Schaltjahr");
+			var YudMonth = new Array("jüd. Monate", "Tischri", "Heshvan", "Kislew", "Tewet", "Schwat", "Adar", "We-Adar", "Nissan", "Ijjar", "Siwan", "Tammus", "Aw", "Elul");
+			var Tribes = new Array("jüd. Stämme", "Ephraim", "Manasse", "Benjamin", "Dan", "Asser", "Naphtali", "Naphtali (Schaltjahr)", "Juda", "Issaschar", "Sebulon", "Ruben", "Simeon", "Gad");
+			var TribesClean = new Array("jüd. Stämme", "Ephraim", "Manasse", "Benjamin", "Dan", "Asser", "Naphtali", "Juda", "Issaschar", "Sebulon", "Ruben", "Simeon", "Gad");
+			var Beings = new Array("lebendige Wesen", "Stier", "Adler", "Löwe", "Mensch");
+
+			function Datum(Tag, Monat, MonStr, Jahr, Leap, Stamm, Wesen){
+				this.Tag = Tag;
+				this.Monat = Monat;
+				this.MonStr = MonStr;
+				this.Jahr = Jahr;
+				this.Leap = Leap;
+				this.Stamm = Stamm;
+				this.Wesen = Wesen;
+			}
+
+			function getDayYud(d, m, y){
+				var tz = MolTisch(y);
+				var diff = MolTisch(y+1) - tz;
+				tz += floor((m-1) *29.5 + 0.5) + d;
+				if (diff ==353 && m>3) {tz--;}
+				if (diff ==355 && m>2) {tz++;}
+				if (diff ==383 && m>3) {tz--;}
+				if ((diff ==383) && (m == 7 || m == 9 || m == 11 || m == 13)) {tz++;}
+				if ((diff ==384) && (m == 7 || m == 9 || m == 11 || m == 13)) {tz++;}
+				if (diff ==385 && m>2){tz++;}
+				if ((diff == 385)&&(m == 7 || m == 9 || m == 11 || m == 13)) {tz++;}
+				var x = tz + 347997;
+				return x;
+			}
+
+
+				function schaltJud(y){
+					return (1 + 7 * y) % 19 < 7 ? 1 : 0;
+				}
+
+				function MolTisch(y){
+					var p, q, m, tz, c, tag;
+					y--;
+					p = floor(y/19);															// Anzahl vergangener 19er-Zyklen
+					q = y % 19;																	// Anzahl vergangener Jahre im aktuellen Zyklus
+					m = 12 * q + floor(0.37 * q + 0.06);										// Anzahl Monate + Schaltmonate im laufenden Zyklus
+					c = p * 17875 + m * 13753 + 5604;											// Anzahl der Chalakim
+					tz = p * 6939 + m * 29;														// vergangene Tage
+					tz += floor(c / 25920);														// addiere Tag aus dem Chalakim
+					c = c % 25920;																// restliche Chalakim
+					if(c > 19439) {tz++;}														// Ausnahme Yach
+					tag = tz % 7;																// Bestimmung des Wochentages
+					if(tag == 2 || tag == 4 || tag == 6) {tz++;}								// Ausnahme Adu
+					if(schaltJud(y + 1) == 0 && tag == 1 && c > 9923 && c < 19440) {tz += 2;}	// Ausnahme Gatrad
+					if(schaltJud(y) == 1 && tag == 0 && c > 16788 && c < 19440) {tz++;}			// Ausnahme Bektupat
+					return tz;
+				}
+
+				function differenz(y){
+					var diff = MolTisch(y + 1) - MolTisch(y);
+					_("isrTime").value = diff;
+					return diff;
+				}
+
+				function helperCall2(){
+					var year = _("gregTime").value;
+					year = parseInt(year.substr(0, 4), 10);
+					differenz(year);
+				}
+
+				function GregIn(y){
+					return floor(y/100) - floor(y/400) - 2;
+				}
+
+				function getDay(d,m,y){
+					m -= 3;
+					if(m < 0){
+						m += 12;
+						y--;
+					}
+					var tz = floor(y * 365.25) + floor(m * 30.6 + 0.5) + d + 1721117;
+					return tz > 2299170 ? tz - GregIn(y) : tz;
+				}
+
+				function makeDate(jd){
+					var y, m, d, tz, tz1, q, rest, r, diff, ms, l, tr, be, conn;
+					tz1 = jd - 347997;
+					m   = floor(tz1 / 29.53059414);
+					q   = floor((m-1)/235);
+					m  -= q*235;
+					y   = q * 19;
+					y  += 1 + floor((m + 0.94) / 12.36842105);
+
+					be = "Platzhalter";
+
+					tz = MolTisch(y);
+					if((tz+1)>tz1){
+						y--; tz = MolTisch(y);
+					}
+					rest = tz1 - tz;
+					r = rest;
+
+					if (r==0){
+						y--;
+						tz = MolTisch(y);
+						rest = tz1 - tz;
+						r    = rest;
+					}
+
+					diff = MolTisch(y+1) - tz;
+
+					if (diff == 353){
+						l  = leapstring[2];
+						if (rest>88){
+							r++
+						}
+						m = floor((r-0.6) / 29.5);
+						d = r - floor(m * 29.5 + 0.5);
+						m++;
+						if (m < 7){
+							ms = YudMonth[m];
+							tr = Tribes[m];
+						}else{
+							ms = YudMonth[m+1];
+							tr = Tribes[m+1];
+						}
+						be = Beings[ceil(m / 3)];
+					}
+
+					if (diff == 354){
+						l  = leapstring[3];
+						m = floor((r-0.6) / 29.5);
+						d = r - floor(m * 29.5 + 0.5);
+						m++;
+						if (m<7){
+							ms = YudMonth[m];
+							tr = Tribes[m];
+						}else{
+							ms = YudMonth[m+1];
+							tr = Tribes[m+1];
+						}
+						be = Beings[ceil(m / 3)];
+					}
+
+					if (diff == 355){
+						l  = leapstring[4];
+						if (rest>60){
+							r--;
+						}
+						m = floor((r-0.6) / 29.5);
+						d = r - floor(m * 29.5 + 0.5);
+						m++;
+						if (rest == 60){
+							d = 30; m = 2;
+						}
+						if (m<7){
+							ms = YudMonth[m];
+							tr = Tribes[m];
+						}else{
+							ms = YudMonth[m+1];
+							tr = Tribes[m+1];
+						}
+						be = Beings[ceil(m / 3)];
+					}
+
+					if (diff == 383){
+						l  = leapstring[5];
+						if (rest>88){
+							rest++;
+						}
+						if (rest>148){
+							r = rest - 148;
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m += 6;
+						}else{
+							r = rest;
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m++;
+						}
+						ms = YudMonth[m];
+						tr = Tribes[m];
+						if(m < 7){
+							be = Beings[ceil(m / 3)];
+						}else{
+							be = Beings[ceil((m - 1) / 3)];
+						}
+					}
+
+					if (diff == 384){
+						l  = leapstring[6];
+						if (rest>148){
+							r = rest - 148;
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m += 6;
+						}else{
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m++;
+						}
+						ms = YudMonth[m];
+						tr = Tribes[m];
+						if(m < 7){
+							be = Beings[ceil(m / 3)];
+						}else{
+							be = Beings[ceil((m - 1) / 3)];
+						}
+					}
+
+					if (diff == 385){
+						l  = leapstring[7];
+						if (r>60){
+							r--;
+						}
+						if (r>148){
+							r = r - 148;
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m += 6;
+						}else{
+							m = floor((r-0.6) / 29.5);
+							d = r - floor(m * 29.5 + 0.5);
+							m++;
+						}
+						if (rest ==60){
+							d = 30; m = 2;
+						}
+						ms = YudMonth[m];
+						tr = Tribes[m];
+						if(m < 7){
+							be = Beings[ceil(m / 3)];
+						}else{
+							be = Beings[ceil((m - 1) / 3)];
+						}
+					}
+
+					var x = new Datum(d, m, ms, y, l, tr, be);
+ 					return x;
+				}
+
+				function helperCall(){
+					var dd = parseInt(_("gregDay").value, 10);
+					var mm = parseInt(_("gregMonth").value, 10);
+					var yyyy = parseInt(_("gregYear").value, 10);
+
+					var JD = getDay(dd, mm, yyyy);
+
+					var DateOut = makeDate(JD);
+					_("isrTime").innerHTML = DateOut.Tag+". "+DateOut.MonStr+" "+DateOut.Jahr;
+					_("tribe").innerHTML = DateOut.Stamm;
+					_("being").innerHTML = DateOut.Wesen;
+
+					if(DateOut.Stamm == "Ephraim" || DateOut.Stamm == "Manasse" || DateOut.Stamm == "Benjamin"){
+						conn = "Ephraim Manasse Benjamin";
+					}
+					if(DateOut.Stamm == "Dan" || DateOut.Stamm == "Asser" || DateOut.Stamm == "Naphtali" || DateOut.Stamm == "Naphtali (Schaltjahr)"){
+						conn = "Dan Asser Naphtali";
+					}
+					if(DateOut.Stamm == "Juda" || DateOut.Stamm == "Issaschar" || DateOut.Stamm == "Sebulon"){
+						conn = "Juda Issaschar Sebulon";
+					}
+					if(DateOut.Stamm == "Ruben" || DateOut.Stamm == "Simeon" || DateOut.Stamm == "Gad"){
+						conn = "Ruben Simeon Gad";
+					}
+					
+					_("connected").innerHTML = conn;
+				}
+
+		</script>
+	</head>
+	<body onload="todaysDate()">
+		<div class="container-fluid mb-5 py-5 bg-success text-center">
+			<span class="display-1">Stammesrechner<br></span><br><br>
+			<span class="display-4">Bitte gib hier das Datum ein:<br></span><br>
+			<div class="row">
+				<div class="col-sm-4 offset-sm-4">
+					<div class="input-group">
+						<input type="text" name="gregDay" id="gregDay" class="form-control" placeholder="Tag" onchange="helperCall()">
+						<input type="text" name="gregMonth" id="gregMonth" class="form-control" placeholder="Monat" onchange="helperCall()">
+						<input type="text" name="gregYear" id="gregYear"  class="form-control" placeholder="Jahr" onchange="helperCall()">	
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="container">
+			<table class="table table-striped table-hover">
+				<tr><td class="w-25">Jüdisches Datum:</td><td class="w-75" id="isrTime"></td></tr>
+				<tr><td>Stamm:</td><td id="tribe"></td></tr>
+				<tr><td>Lebendiges Wesen:</td><td id="being"></td></tr>
+				<tr><td>Verbundene Stämme:</td><td id="connected"></td></tr>
+			</table>
+			<button type="button" name="calc" id="calc" class="btn btn-primary btn-block" style="font-size:24px;" onclick="helperCall()">Berechnen</button>
+		</div>
+		<div class="container-fluid mt-5 py-3 bg-success">
+			<div>
+				<p class="text-center">
+					Geschrieben von <a class="myLink" href="https://jeremiasloos.de/">Jeremias Loos</a>; Formeln übertragen von <a class="myLink" href="www.nabkal.de/kalrechyud.html">www.nabkal.de/kalrechyud.html</a>.
+				</p>
+				<p class="text-justify">
+					Dieser Kalender stellt ein nicht-professionelles Hobbyprojekt dar. Trotz mehrfacher Überprüfung kann nicht ausgeschlossen werden, dass sich in den Formeln zur Umrechnung womöglich ein Fehler eingeschlichen hat und damit das Ergebnis verfälscht. Es wird also ausdrücklich darauf hingewiesen, dass für mögliche Fehler dem Autor keine Verantwortung übertragen werden kann.
+				</p>
+				<p>
+					Dieses Tool ist komplett offline nutzbar und kann vom Anwender deshalb gerne heruntergeladen werden. Da sämtliche Berechnungen offline erfolgen, verlassen die eingegebenen Daten Ihren Rechner nicht. Es wird also nichts vom Autor gespeichert, das Sie hier eingeben.
+				</p>
+				<p>
+					English Version: <a class="myLink" href="tribes.html">Click here</a>
+				</p>
+			</div>
+<!--			<div>
+				<p>
+					Löwe = Judah (Nissan), Issaschar (Ijjar), Sebulon (Siwan)<br>
+					Mensch = Ruben (Tammus), Simeon (Aw), Gad (Elul)<br>
+					Stier = Ephraim (Tischri), Manasse (Heshvan), Benjamin (Kislew)<br>
+					Adler = Dan (Tewet), Asser (Schwat), Naphtali (Adar)<br>
+				</p>
+			</div>-->
+		</div>
+	</body>
+</html>
